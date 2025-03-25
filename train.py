@@ -103,7 +103,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 progress_bar.update(10)
             if iteration == opt.iterations:
                 progress_bar.close()
-
+            # print("\n number of points: ", gaussians.get_xyz.shape[0])
             # Log and save
             training_report(tb_writer, iteration, Ll1, loss, l1_loss, iter_start.elapsed_time(iter_end), testing_iterations, scene, render, (pipe, background))
             if (iteration in saving_iterations):
@@ -159,7 +159,7 @@ def training_report(tb_writer, iteration, Ll1, loss, l1_loss, elapsed, testing_i
         tb_writer.add_scalar('train_loss_patches/l1_loss', Ll1.item(), iteration)
         tb_writer.add_scalar('train_loss_patches/total_loss', loss.item(), iteration)
         tb_writer.add_scalar('iter_time', elapsed, iteration)
-
+        tb_writer.add_scalar('number_of_points', scene.gaussians.get_xyz.shape[0], iteration)
     # Report test and samples of training set
     if iteration in testing_iterations:
         torch.cuda.empty_cache()
