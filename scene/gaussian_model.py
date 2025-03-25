@@ -462,3 +462,17 @@ class GaussianModel:
     def add_densification_stats(self, viewspace_point_tensor, update_filter):
         self.xyz_gradient_accum[update_filter] += torch.norm(viewspace_point_tensor.grad[update_filter,:2], dim=-1, keepdim=True)
         self.denom[update_filter] += 1
+        
+    def final_prune(self): # 导出模型时使用
+        
+        for m in self.vq_scale.layers:
+            m.training = False
+        for m in self.vq_rot.layers: 
+            m.training = False
+
+        self._scaling, self.sca_idx, _ = self.vq_scale(self.get_scaling.unsqueeze(1))
+        self._rotation, self.rot_idx, _ = self.vq_rot(self.get_rotation.unsqueeze(1))
+        self._scaling = self._scaling.squeeze()
+        self._rotation = self._rotation.squeeze()
+
+        torch.cuda.empty_cache()
