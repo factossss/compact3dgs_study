@@ -65,9 +65,9 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
     #     scales = pc.get_scaling
     #     rotations = pc.get_rotation
     if itr == -1:
-        scales = pc._scaling
-        rotations = pc._rotation
-        opacity = pc._opacity
+        scales = pc.get_scaling
+        rotations = pc.get_rotation
+        opacity = pc.get_opacity
         
     else:
         if rvq_iter:
