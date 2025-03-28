@@ -54,7 +54,7 @@ class ModelParams(ParamGroup):
         self._white_background = False
         self.data_device = "cuda"
         self.eval = False
-        self.max_hashmap = 19
+        # self.max_hashmap = 19
         self.rvq_size = 64
         self.rvq_num = 6
         super().__init__(parser, "Loading Parameters", sentinel)
