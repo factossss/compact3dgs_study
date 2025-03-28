@@ -474,5 +474,6 @@ class GaussianModel:
         self._rotation, self.rot_idx, _ = self.vq_rot(self.get_rotation.unsqueeze(1))
         self._scaling = self._scaling.squeeze()
         self._rotation = self._rotation.squeeze()
+        self._opacity = self.get_opacity
 
         torch.cuda.empty_cache()
