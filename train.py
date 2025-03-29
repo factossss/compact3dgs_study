@@ -40,6 +40,8 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
 
     bg_color = [1, 1, 1] if dataset.white_background else [0, 0, 0]
     background = torch.tensor(bg_color, dtype=torch.float32, device="cuda")
+    
+    mask_blur = torch.zeros(gaussians._xyz.shape[0], device='cuda')
 
     iter_start = torch.cuda.Event(enable_timing = True)
     iter_end = torch.cuda.Event(enable_timing = True)
@@ -120,11 +122,14 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
 
                 if iteration > opt.densify_from_iter and iteration % opt.densification_interval == 0:
                     size_threshold = 20 if iteration > opt.opacity_reset_interval else None
-                    gaussians.densify_and_prune(opt.densify_grad_threshold, 0.005, scene.cameras_extent, size_threshold)
+                    gaussians.densify_and_prune_split(opt.densify_grad_threshold, 
+                                                    0.005, scene.cameras_extent, 
+                                                    size_threshold, mask_blur) # blur split
+                    mask_blur = torch.zeros(gaussians._xyz.shape[0], device='cuda') # reset mask_blur
                 
                 if iteration % opt.opacity_reset_interval == 0 or (dataset.white_background and iteration == opt.densify_from_iter):
                     gaussians.reset_opacity()
-
+                    
             # Optimizer step
             if iteration < opt.iterations:
                 gaussians.optimizer.step()
