@@ -13,7 +13,7 @@ import os
 import torch
 from random import randint
 from utils.loss_utils import l1_loss, ssim
-from gaussian_renderer import render, network_gui
+from gaussian_renderer import render, network_gui, render_img
 import sys
 from scene import Scene, GaussianModel
 from utils.general_utils import safe_state
@@ -56,7 +56,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 net_image_bytes = None
                 custom_cam, do_training, pipe.convert_SHs_python, pipe.compute_cov3D_python, keep_alive, scaling_modifer = network_gui.receive()
                 if custom_cam != None:
-                    net_image = render(custom_cam, gaussians, pipe, background, scaling_modifer)["render"]
+                    net_image = render_img(custom_cam, gaussians, pipe, background, scaling_modifer)["render"]
                     net_image_bytes = memoryview((torch.clamp(net_image, min=0, max=1.0) * 255).byte().permute(1, 2, 0).contiguous().cpu().numpy())
                 network_gui.send(net_image_bytes, dataset.source_path)
                 if do_training and ((iteration < int(opt.iterations)) or not keep_alive):
@@ -82,9 +82,9 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             pipe.debug = True
         # render_pkg = render(viewpoint_cam, gaussians, pipe, background)
         if iteration <= opt.rvq_iter:
-            render_pkg = render(viewpoint_cam, gaussians, pipe, background, itr=iteration, rvq_iter=False)
+            render_pkg = render_img(viewpoint_cam, gaussians, pipe, background, itr=iteration, rvq_iter=False)
         else:
-            render_pkg = render(viewpoint_cam, gaussians, pipe, background, itr=iteration, rvq_iter=True)
+            render_pkg = render_img(viewpoint_cam, gaussians, pipe, background, itr=iteration, rvq_iter=True)
         image, viewspace_point_tensor, visibility_filter, radii = render_pkg["render"], render_pkg["viewspace_points"], render_pkg["visibility_filter"], render_pkg["radii"]
 
         # Loss
