@@ -11,6 +11,7 @@
 
 import os
 import torch
+import numpy as np
 from random import randint
 from utils.loss_utils import l1_loss, ssim
 from gaussian_renderer import render, network_gui, render_img
@@ -120,6 +121,9 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 gaussians.max_radii2D[visibility_filter] = torch.max(gaussians.max_radii2D[visibility_filter], radii[visibility_filter])
                 gaussians.add_densification_stats(viewspace_point_tensor, visibility_filter)
 
+                area_max = render_pkg["area_max"]
+                mask_blur = torch.logical_or(mask_blur, area_max>(image.shape[1]*image.shape[2]/5000))
+                
                 if iteration > opt.densify_from_iter and iteration % opt.densification_interval == 0:
                     size_threshold = 20 if iteration > opt.opacity_reset_interval else None
                     gaussians.densify_and_prune_split(opt.densify_grad_threshold, 
@@ -129,6 +133,40 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 
                 if iteration % opt.opacity_reset_interval == 0 or (dataset.white_background and iteration == opt.densify_from_iter):
                     gaussians.reset_opacity()
+            
+            # if iteration in opt.pruning_iterations:
+
+            #     imp_score = torch.zeros(gaussians._xyz.shape[0]).cuda()
+            #     accum_area_max = torch.zeros(gaussians._xyz.shape[0]).cuda()
+            #     views=scene.getTrainCameras()
+            #     for view in views:
+            #         # print(idx)
+            #         render_pkg = render_img(view, gaussians, pipe, background)
+            #         accum_weights = render_pkg["accum_weights"]
+            #         area_proj = render_pkg["area_proj"]
+            #         area_max = render_pkg["area_max"]
+
+            #         accum_area_max = accum_area_max+area_max
+            #         mask_t=area_max!=0
+            #         temp=imp_score+accum_weights/area_proj
+            #         imp_score[mask_t] = temp[mask_t]
+                    
+            #     # imp_score[accum_area_max==0]=0 #去除不直接与视线相交的点
+            #     prob = imp_score/imp_score.sum() #采样概率
+            #     prob = prob.cpu().numpy()
+
+            #     factor=args.sampling_factor
+            #     N_xyz=gaussians._xyz.shape[0]
+            #     num_sampled=int(N_xyz*factor*((prob!=0).sum()/prob.shape[0]))
+            #     indices = np.random.choice(N_xyz, size=num_sampled, 
+            #                                p=prob, replace=False)
+    
+            #     mask = np.zeros(N_xyz, dtype=bool)
+            #     mask[indices] = True
+
+            #     # print(mask.sum(), mask.sum()/mask.shape[0])                 
+            #     gaussians.prune_points(mask==False) 
+            #     torch.cuda.empty_cache()
                     
             # Optimizer step
             if iteration < opt.iterations:
@@ -213,6 +251,9 @@ if __name__ == "__main__":
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--checkpoint_iterations", nargs="+", type=int, default=[])
     parser.add_argument("--start_checkpoint", type=str, default = None)
+    
+    # parser.add_argument("--pruning_iterations", nargs="+", type=int, default=[10_000, 15_000, 20_000])
+    
     # parser.add_argument("--comp", action="store_true")
     parser.add_argument("--store_npz", action="store_true")
     args = parser.parse_args(sys.argv[1:])
