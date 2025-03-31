@@ -134,39 +134,39 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 if iteration % opt.opacity_reset_interval == 0 or (dataset.white_background and iteration == opt.densify_from_iter):
                     gaussians.reset_opacity()
             
-            # if iteration in opt.pruning_iterations:
+            if iteration in opt.pruning_iterations:
 
-            #     imp_score = torch.zeros(gaussians._xyz.shape[0]).cuda()
-            #     accum_area_max = torch.zeros(gaussians._xyz.shape[0]).cuda()
-            #     views=scene.getTrainCameras()
-            #     for view in views:
-            #         # print(idx)
-            #         render_pkg = render_img(view, gaussians, pipe, background)
-            #         accum_weights = render_pkg["accum_weights"]
-            #         area_proj = render_pkg["area_proj"]
-            #         area_max = render_pkg["area_max"]
+                imp_score = torch.zeros(gaussians._xyz.shape[0]).cuda()
+                accum_area_max = torch.zeros(gaussians._xyz.shape[0]).cuda()
+                views=scene.getTrainCameras()
+                for view in views:
+                    # print(idx)
+                    render_pkg = render_img(view, gaussians, pipe, background)
+                    accum_weights = render_pkg["accum_weights"]
+                    area_proj = render_pkg["area_proj"]
+                    area_max = render_pkg["area_max"]
 
-            #         accum_area_max = accum_area_max+area_max
-            #         mask_t=area_max!=0
-            #         temp=imp_score+accum_weights/area_proj
-            #         imp_score[mask_t] = temp[mask_t]
+                    accum_area_max = accum_area_max+area_max
+                    mask_t=area_max!=0
+                    temp=imp_score+accum_weights/area_proj
+                    imp_score[mask_t] = temp[mask_t]
                     
-            #     # imp_score[accum_area_max==0]=0 #去除不直接与视线相交的点
-            #     prob = imp_score/imp_score.sum() #采样概率
-            #     prob = prob.cpu().numpy()
+                # imp_score[accum_area_max==0]=0 #去除不直接与视线相交的点
+                prob = imp_score/imp_score.sum() #采样概率
+                prob = prob.cpu().numpy()
 
-            #     factor=args.sampling_factor
-            #     N_xyz=gaussians._xyz.shape[0]
-            #     num_sampled=int(N_xyz*factor*((prob!=0).sum()/prob.shape[0]))
-            #     indices = np.random.choice(N_xyz, size=num_sampled, 
-            #                                p=prob, replace=False)
+                factor=args.sampling_factor
+                N_xyz=gaussians._xyz.shape[0]
+                num_sampled=int(N_xyz*factor*((prob!=0).sum()/prob.shape[0]))
+                indices = np.random.choice(N_xyz, size=num_sampled, 
+                                           p=prob, replace=False)
     
-            #     mask = np.zeros(N_xyz, dtype=bool)
-            #     mask[indices] = True
+                mask = np.zeros(N_xyz, dtype=bool)
+                mask[indices] = True
 
-            #     # print(mask.sum(), mask.sum()/mask.shape[0])                 
-            #     gaussians.prune_points(mask==False) 
-            #     torch.cuda.empty_cache()
+                # print(mask.sum(), mask.sum()/mask.shape[0])                 
+                gaussians.prune_points(mask==False) 
+                torch.cuda.empty_cache()
                     
             # Optimizer step
             if iteration < opt.iterations:
