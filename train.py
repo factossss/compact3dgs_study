@@ -256,6 +256,7 @@ if __name__ == "__main__":
     
     # parser.add_argument("--comp", action="store_true")
     parser.add_argument("--store_npz", action="store_true")
+    parser.add_argument("--sampling_factor", type=float, default = 0.5)
     args = parser.parse_args(sys.argv[1:])
     args.save_iterations.append(args.iterations)
     
