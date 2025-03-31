@@ -141,7 +141,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 views=scene.getTrainCameras()
                 for view in views:
                     # print(idx)
-                    render_pkg = render_img(view, gaussians, pipe, background)
+                    render_pkg = render_img(view, gaussians, pipe, background, itr=iteration, rvq_iter=False)
                     accum_weights = render_pkg["accum_weights"]
                     area_proj = render_pkg["area_proj"]
                     area_max = render_pkg["area_max"]
