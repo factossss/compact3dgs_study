@@ -64,6 +64,8 @@ class GaussianModel:
         
         self.vq_scale = ResidualVQ(dim = 3, codebook_size = model.rvq_size, num_quantizers = model.rvq_num, commitment_weight = 0., kmeans_init = True, kmeans_iters = 1, ema_update = False, learnable_codebook=True, in_place_codebook_optimizer=lambda *args, **kwargs: torch.optim.Adam(*args, **kwargs, lr=0.0001)).cuda()
         self.vq_rot = ResidualVQ(dim = 4, codebook_size = model.rvq_size, num_quantizers = model.rvq_num, commitment_weight = 0., kmeans_init = True, kmeans_iters = 1, ema_update = False, learnable_codebook=True, in_place_codebook_optimizer=lambda *args, **kwargs: torch.optim.Adam(*args, **kwargs, lr=0.0001)).cuda()
+        # vq of features_rest
+        self.vq_shs = ResidualVQ(dim = 3 * ((self.max_sh_degree + 1) ** 2 - 1), codebook_size = model.rvq_size, num_quantizers = model.rvq_num, commitment_weight = 0., kmeans_init = True, kmeans_iters = 1, ema_update = False, learnable_codebook=True, in_place_codebook_optimizer=lambda *args, **kwargs: torch.optim.Adam(*args, **kwargs, lr=0.0001)).cuda()
         self.rvq_bit = math.log2(model.rvq_size) # 用于后续的内存计算
         self.rvq_num = model.rvq_num
 
@@ -225,12 +227,14 @@ class GaussianModel:
         save_dict["opacity"] = self._opacity.detach().cpu().half().numpy()
         save_dict["scale"] = np.packbits(np.unpackbits(self.sca_idx.unsqueeze(-1).cpu().numpy().astype(np.uint8), axis=-1, count=int(self.rvq_bit), bitorder='little').flatten(), axis=None)
         save_dict["rotation"] = np.packbits(np.unpackbits(self.rot_idx.unsqueeze(-1).cpu().numpy().astype(np.uint8), axis=-1, count=int(self.rvq_bit), bitorder='little').flatten(), axis=None)
+        save_dict["features_rest"] = np.packbits(np.unpackbits(self.shs_idx.unsqueeze(-1).cpu().numpy().astype(np.uint8), axis=-1, count=int(self.rvq_bit), bitorder='little').flatten(), axis=None)
         # save_dict["hash"] = self.recolor.params.cpu().half().numpy()
         # save_dict["mlp"] = self.mlp_head.params.cpu().half().numpy()
         save_dict["features_dc"] = self._features_dc.detach().cpu().half().numpy()
-        save_dict["features_rest"] = self._features_rest.detach().cpu().half().numpy()
+        # save_dict["features_rest"] = self._features_rest.detach().cpu().half().numpy()
         save_dict["codebook_scale"] = self.vq_scale.cpu().state_dict()
         save_dict["codebook_rotation"] = self.vq_rot.cpu().state_dict()
+        save_dict["codebook_shs"] = self.vq_shs.cpu().state_dict()
         save_dict["rvq_info"] = np.array([int(self.rvq_num), int(self.rvq_bit)])
         
         np.savez(path, **save_dict)
@@ -291,13 +295,17 @@ class GaussianModel:
 
             scale = np.packbits(np.unpackbits(load_dict["scale"], axis=None)[:load_dict["xyz"].shape[0]*load_dict["rvq_info"][0]*load_dict["rvq_info"][1]].reshape(-1, load_dict["rvq_info"][1]), axis=-1, bitorder='little')
             rotation = np.packbits(np.unpackbits(load_dict["rotation"], axis=None)[:load_dict["xyz"].shape[0]*load_dict["rvq_info"][0]*load_dict["rvq_info"][1]].reshape(-1, load_dict["rvq_info"][1]), axis=-1, bitorder='little')
+            feature_rest = np.packbits(np.unpackbits(load_dict["features_rest"], axis=None)[:load_dict["xyz"].shape[0]*load_dict["rvq_info"][0]*load_dict["rvq_info"][1]].reshape(-1, load_dict["rvq_info"][1]), axis=-1, bitorder='little')
 
             self.vq_scale.load_state_dict(load_dict["codebook_scale"].item())
             self.vq_rot.load_state_dict(load_dict["codebook_rotation"].item())
+            self.vq_shs.load_state_dict(load_dict["codebook_shs"].item())
             scale_codes = self.vq_scale.get_codes_from_indices(torch.from_numpy(scale).cuda().reshape(-1,1,load_dict["rvq_info"][0]).long())
             scale = self.vq_scale.project_out(reduce(scale_codes, 'q ... -> ...', 'sum'))
             rotation_codes = self.vq_rot.get_codes_from_indices(torch.from_numpy(rotation).cuda().reshape(-1,1,load_dict["rvq_info"][0]).long())
             rotation = self.vq_rot.project_out(reduce(rotation_codes, 'q ... -> ...', 'sum'))
+            features_rest_codes = self.vq_shs.get_codes_from_indices(torch.from_numpy(feature_rest).cuda().reshape(-1,1,load_dict["rvq_info"][0]).long())
+            features_rest = self.vq_shs.project_out(reduce(features_rest_codes, 'q ... -> ...', 'sum'))
 
             self._xyz = nn.Parameter(torch.from_numpy(load_dict["xyz"]).cuda().float().requires_grad_(True))
             self._opacity = nn.Parameter(torch.from_numpy(load_dict["opacity"]).reshape(-1,1).cuda().float().requires_grad_(True))
@@ -306,8 +314,8 @@ class GaussianModel:
             # self.recolor.params = nn.Parameter(torch.from_numpy(load_dict["hash"]).cuda().half().requires_grad_(True))
             # self.mlp_head.params = nn.Parameter(torch.from_numpy(load_dict["mlp"]).cuda().half().requires_grad_(True))
             self._features_dc = nn.Parameter(torch.from_numpy(load_dict["features_dc"]).contiguous().cuda().half().requires_grad_(True))
-            self._features_rest = nn.Parameter(torch.from_numpy(load_dict["features_rest"]).contiguous().cuda().half().requires_grad_(True)
-            )
+            # self._features_rest = nn.Parameter(torch.from_numpy(load_dict["features_rest"]).contiguous().cuda().half().requires_grad_(True)
+            self._features_rest = nn.Parameter(feature_rest.squeeze(1).requires_grad_(True))
             self.active_sh_degree = self.max_sh_degree
         else:
             self.load_ply(path)
@@ -516,11 +524,15 @@ class GaussianModel:
             m.training = False
         for m in self.vq_rot.layers: 
             m.training = False
+        for m in self.vq_shs.layers:
+            m.training = False
 
         self._scaling, self.sca_idx, _ = self.vq_scale(self.get_scaling.unsqueeze(1))
         self._rotation, self.rot_idx, _ = self.vq_rot(self.get_rotation.unsqueeze(1))
+        self._features_rest, self.shs_idx, _ = self.vq_shs(self._features_rest.unsqueeze(1))
         self._scaling = self._scaling.squeeze()
         self._rotation = self._rotation.squeeze()
+        self._features_rest = self._features_rest.squeeze()
         self._opacity = self.get_opacity
 
         torch.cuda.empty_cache()

@@ -64,21 +64,26 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
         scales = pc._scaling
         rotations = pc._rotation
         opacity = pc._opacity
+        shs = pc.get_features
         
     else:
         if rvq_iter:
             scales = pc.vq_scale(pc.get_scaling.unsqueeze(0))[0] # 通过VQ-VAE获得的尺度
             rotations = pc.vq_rot(pc.get_rotation.unsqueeze(0))[0]
+            features_rest = pc.vq_shs(pc.get_features.unsqueeze(0))[0]
             scales = scales.squeeze()
             rotations = rotations.squeeze()
+            features_rest = features_rest.squeeze()
+            shs = torch.cat((pc._features_dc, features_rest), dim=1)
             opacity = pc.get_opacity
 
         else:
             scales = pc.get_scaling
             rotations = pc.get_rotation
             opacity = pc.get_opacity 
+            shs = pc.get_features
             
-    shs = pc.get_features
+    # shs = pc.get_features
     # Rasterize visible Gaussians to image, obtain their radii (on screen). 
     rendered_image, radii = rasterizer(
         means3D = means3D.float(),
@@ -142,21 +147,26 @@ def render_img(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tens
         scales = pc._scaling
         rotations = pc._rotation
         opacity = pc._opacity
+        shs = pc.get_features
         
     else:
         if rvq_iter:
             scales = pc.vq_scale(pc.get_scaling.unsqueeze(0))[0] # 通过VQ-VAE获得的尺度
             rotations = pc.vq_rot(pc.get_rotation.unsqueeze(0))[0]
+            features_rest = pc.vq_shs(pc.get_features.unsqueeze(0))[0]
             scales = scales.squeeze()
             rotations = rotations.squeeze()
+            features_rest = features_rest.squeeze()
+            shs = torch.cat((pc._features_dc, features_rest), dim=1)
             opacity = pc.get_opacity
 
         else:
             scales = pc.get_scaling
             rotations = pc.get_rotation
             opacity = pc.get_opacity 
+            shs = pc.get_features
             
-    shs = pc.get_features
+    # shs = pc.get_features
     # Rasterize visible Gaussians to image, obtain their radii (on screen). 
     rendered_image, radii, \
     accum_weights_ptr, accum_weights_count, accum_max_count  = rasterizer(  #这里有修改

@@ -89,7 +89,7 @@ class OptimizationParams(ParamGroup):
         self.densify_from_iter = 500
         self.densify_until_iter = 15_000
         self.densify_grad_threshold = 0.0002
-        self.pruning_iterations = [10_000, 15_000, 20_000]
+        self.pruning_iterations = [15_000, 20_000]
         # self.mask_prune_iter = 1_000
         self.rvq_iter = 29_000
         # self.mask_lr = 0.01

@@ -147,14 +147,16 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                     area_max = render_pkg["area_max"]
 
                     accum_area_max = accum_area_max+area_max
-                    mask_t=area_max!=0
+                    # mask_t=area_max!=0
+                    mask_t=area_proj!=0
                     temp=imp_score+accum_weights/area_proj
                     imp_score[mask_t] = temp[mask_t]
+                    # imp_score = imp_score+accum_weights/area_proj
                     
-                # imp_score[accum_area_max==0]=0 #去除不直接与视线相交的点
+                imp_score[accum_area_max==0] = 0 #去除不直接与视线相交的点
                 prob = imp_score/imp_score.sum() #采样概率
                 prob = prob.cpu().numpy()
-
+                print((prob!=0).sum()/prob.shape[0])
                 factor=args.sampling_factor
                 N_xyz=gaussians._xyz.shape[0]
                 num_sampled=int(N_xyz*factor*((prob!=0).sum()/prob.shape[0]))
@@ -164,7 +166,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 mask = np.zeros(N_xyz, dtype=bool)
                 mask[indices] = True
 
-                # print(mask.sum(), mask.sum()/mask.shape[0])                 
+                print('mask', mask.sum(), mask.sum()/mask.shape[0])                 
                 gaussians.prune_points(mask==False) 
                 torch.cuda.empty_cache()
                     
