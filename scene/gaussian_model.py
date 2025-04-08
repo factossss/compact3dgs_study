@@ -532,7 +532,7 @@ class GaussianModel:
         self._features_rest, self.shs_idx, _ = self.vq_shs(self._features_rest.unsqueeze(1))
         self._scaling = self._scaling.squeeze()
         self._rotation = self._rotation.squeeze()
-        self._features_rest = self._features_rest.squeeze()
+        self._features_rest = self._features_rest.squeeze().reshape(self._xyz.shape[0], 3, (self.max_sh_degree + 1) ** 2 - 1)
         self._opacity = self.get_opacity
 
         torch.cuda.empty_cache()

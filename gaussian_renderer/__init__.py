@@ -70,10 +70,10 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
         if rvq_iter:
             scales = pc.vq_scale(pc.get_scaling.unsqueeze(0))[0] # 通过VQ-VAE获得的尺度
             rotations = pc.vq_rot(pc.get_rotation.unsqueeze(0))[0]
-            features_rest = pc.vq_shs(pc.get_features.unsqueeze(0))[0]
+            features_rest = pc.vq_shs(pc._features_rest.flatten().unsqueeze(0))[0]
             scales = scales.squeeze()
             rotations = rotations.squeeze()
-            features_rest = features_rest.squeeze()
+            features_rest = features_rest.squeeze().reshape(pc._xyz.shape[0], 3, (pc.max_sh_degree + 1) ** 2 - 1)
             shs = torch.cat((pc._features_dc, features_rest), dim=1)
             opacity = pc.get_opacity
 
@@ -153,10 +153,10 @@ def render_img(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tens
         if rvq_iter:
             scales = pc.vq_scale(pc.get_scaling.unsqueeze(0))[0] # 通过VQ-VAE获得的尺度
             rotations = pc.vq_rot(pc.get_rotation.unsqueeze(0))[0]
-            features_rest = pc.vq_shs(pc.get_features.unsqueeze(0))[0]
+            features_rest = pc.vq_shs(pc._features_rest.flatten().unsqueeze(0))[0]
             scales = scales.squeeze()
             rotations = rotations.squeeze()
-            features_rest = features_rest.squeeze()
+            features_rest = features_rest.squeeze().reshape(pc._xyz.shape[0], 3, (pc.max_sh_degree + 1) ** 2 - 1)
             shs = torch.cat((pc._features_dc, features_rest), dim=1)
             opacity = pc.get_opacity
 
