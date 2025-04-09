@@ -257,7 +257,7 @@ if __name__ == "__main__":
     # parser.add_argument("--pruning_iterations", nargs="+", type=int, default=[10_000, 15_000, 20_000])
     
     # parser.add_argument("--comp", action="store_true")
-    parser.add_argument("--store_npz", action="store_true")
+    parser.add_argument("--store_npz", action="store_true", default=True)
     parser.add_argument("--sampling_factor", type=float, default = 0.5)
     args = parser.parse_args(sys.argv[1:])
     args.save_iterations.append(args.iterations)

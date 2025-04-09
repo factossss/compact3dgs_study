@@ -70,11 +70,18 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
         if rvq_iter:
             scales = pc.vq_scale(pc.get_scaling.unsqueeze(0))[0] # 通过VQ-VAE获得的尺度
             rotations = pc.vq_rot(pc.get_rotation.unsqueeze(0))[0]
-            features_rest = pc.vq_shs(pc._features_rest.flatten().unsqueeze(0))[0]
+            # features_rest = pc.vq_shs(pc._features_rest.flatten().unsqueeze(0))[0]
+            sh1 = pc.vq_sh_1(pc.get_features[:, 1:4, :].reshape(pc._xyz.shape[0], -1).unsqueeze(0))[0]
+            sh2 = pc.vq_sh_2(pc.get_features[:, 4:9, :].reshape(pc._xyz.shape[0], -1).unsqueeze(0))[0]
+            sh3 = pc.vq_sh_3(pc.get_features[:, 9:16, :].reshape(pc._xyz.shape[0], -1).unsqueeze(0))[0]
             scales = scales.squeeze()
             rotations = rotations.squeeze()
-            features_rest = features_rest.squeeze().reshape(pc._xyz.shape[0], 3, (pc.max_sh_degree + 1) ** 2 - 1)
-            shs = torch.cat((pc._features_dc, features_rest), dim=1)
+            # features_rest = features_rest.squeeze().reshape(pc._xyz.shape[0], 3, (pc.max_sh_degree + 1) ** 2 - 1)
+            sh1 = sh1.squeeze().reshape(pc._xyz.shape[0], 3, 3)
+            sh2 = sh2.squeeze().reshape(pc._xyz.shape[0], 5, 3)
+            sh3 = sh3.squeeze().reshape(pc._xyz.shape[0], 7, 3)
+            features_dc = pc._features_dc
+            shs = torch.cat((features_dc, sh1, sh2, sh3), dim=1)
             opacity = pc.get_opacity
 
         else:
@@ -153,11 +160,18 @@ def render_img(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tens
         if rvq_iter:
             scales = pc.vq_scale(pc.get_scaling.unsqueeze(0))[0] # 通过VQ-VAE获得的尺度
             rotations = pc.vq_rot(pc.get_rotation.unsqueeze(0))[0]
-            features_rest = pc.vq_shs(pc._features_rest.flatten().unsqueeze(0))[0]
+            # features_rest = pc.vq_shs(pc._features_rest.flatten().unsqueeze(0))[0]
+            sh1 = pc.vq_sh_1(pc.get_features[:, 1:4, :].reshape(pc._xyz.shape[0], -1).unsqueeze(0))[0]
+            sh2 = pc.vq_sh_2(pc.get_features[:, 4:9, :].reshape(pc._xyz.shape[0], -1).unsqueeze(0))[0]
+            sh3 = pc.vq_sh_3(pc.get_features[:, 9:16, :].reshape(pc._xyz.shape[0], -1).unsqueeze(0))[0]
             scales = scales.squeeze()
             rotations = rotations.squeeze()
-            features_rest = features_rest.squeeze().reshape(pc._xyz.shape[0], 3, (pc.max_sh_degree + 1) ** 2 - 1)
-            shs = torch.cat((pc._features_dc, features_rest), dim=1)
+            # features_rest = features_rest.squeeze().reshape(pc._xyz.shape[0], 3, (pc.max_sh_degree + 1) ** 2 - 1)
+            sh1 = sh1.squeeze().reshape(pc._xyz.shape[0], 3, 3)
+            sh2 = sh2.squeeze().reshape(pc._xyz.shape[0], 5, 3)
+            sh3 = sh3.squeeze().reshape(pc._xyz.shape[0], 7, 3)
+            features_dc = pc._features_dc
+            shs = torch.cat((features_dc, sh1, sh2, sh3), dim=1)
             opacity = pc.get_opacity
 
         else:
